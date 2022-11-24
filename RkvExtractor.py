@@ -201,15 +201,15 @@ def ExtractFile(fd, filename):
 
 def main():
     args = sys.argv[1:] # remove first argument which is always the path to this python file
-    rkvPath = os.path.dirname(sys.argv[0]) + "\Data_GC.rkv" # get RKV path
     
     if len(args) == 0:
-        print("Usage:\n'-dumpNames' dumps a list of all files\n'-extract %s' extracts a given file\n'-dumpDirectories' dumps a list of directories")
+        print("Usage:\nRKV Path required as first arg\nOptional:\n'-dumpNames' dumps a list of all files\n'-extract %s' extracts a given file\n'-dumpDirectories' dumps a list of directories")
         return
     
+    rkvPath = args[0] # get RKV path
     print(rkvPath)
     
-    if len(args) > 0 and args[0] == "-dumpNames":
+    if len(args) > 1 and args[1] == "-dumpNames":
         rkvFd = open(rkvPath, "rb") # open rkv
         fileList = os.path.dirname(sys.argv[0]) + "\\fileList.txt"
         listFd = open(fileList, "w")
@@ -217,7 +217,7 @@ def main():
         listFd.close() # close list file
         rkvFd.close() # close rkv file!
         
-    if len(args) > 0 and args[0] == "-dumpDirectories":
+    if len(args) > 1 and args[1] == "-dumpDirectories":
         rkvFd = open(rkvPath, "rb") # open rkv
         directoryList = os.path.dirname(sys.argv[0]) + "\\directoryList.txt"
         listFd = open(directoryList, "w")
@@ -225,9 +225,9 @@ def main():
         listFd.close() # close list file
         rkvFd.close() # close rkv file!
     
-    if len(args) > 1 and args[0] == "-extract":
+    if len(args) > 2 and args[1] == "-extract":
         rkvFd = open(rkvPath, "rb") # open rkv
-        ExtractFile(rkvFd, args[1])
+        ExtractFile(rkvFd, args[2])
         rkvFd.close() # close rkv file!
     
 #end of main
