@@ -3,6 +3,8 @@
  
  This does not support writing files or building RKVs yet, just extracting files from them
  
+ Extracted files are currently placed in the folder of the program
+ 
 # Usage
  RKV path is required as the first argument
 

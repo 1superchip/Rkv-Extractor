@@ -3,8 +3,6 @@ import zlib # for crc calculation
 
 # Written by Chippy
 
-# place RKV in same directory as this file
-
 # file entries come before directory entries
 # go to directory entries by adding file entry array size to file entry offset
 
