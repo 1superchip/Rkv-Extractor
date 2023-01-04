@@ -191,6 +191,36 @@ def find_FileEntry(fd, filename):
 
 #end of find_FileEntry
 
+def find_FileEntry_RKV2(fd, filename):
+    #RKV2 file entry size is 0x14
+    fd.seek(4, 0) # seek to file entry count
+    nmbrOfEntries = read_int_little(fd) # read entry count
+    print(nmbrOfEntries)
+    entryNameLength = read_int_little(fd) # read name length
+    unused = read_int_little(fd)
+    unused = read_int_little(fd)
+    entryOffset = read_int_little(fd)
+    stringTableOffset = entryOffset + (nmbrOfEntries * 0x14)
+    
+    currEntryOffset = entryOffset
+    fd.seek(entryOffset, 0) # seek to first entry
+    print(entryOffset)
+    i = 0
+    for i in range(nmbrOfEntries):
+        fileNameAddr = read_int_little(fd) # read string offset
+        #print(fileNameAddr)
+        fd.seek(stringTableOffset + fileNameAddr, 0)
+        if read_string(fd) == filename:
+            return currEntryOffset
+        
+        currEntryOffset += 0x14
+        fd.seek(currEntryOffset, 0)
+     
+    return 0 # return 0 if the file doesn't exist
+
+#end of find_FileEntry_RKV2
+
+# function to extract file from RKV1
 def ExtractFile(fd, filename):
     entryOffset = find_FileEntry(fd, filename)
     print(entryOffset)
@@ -225,6 +255,41 @@ def ExtractFile(fd, filename):
 
 #end of ExtractFile
 
+# function to extract file from RKV2
+def ExtractFile_RKV2(fd, filename):
+    entryOffset = find_FileEntry_RKV2(fd, filename)
+    print(entryOffset)
+    if entryOffset != 0:
+        file_name = os.path.dirname(sys.argv[0]) + "\%s" % filename
+        print(file_name)
+        fd.seek(entryOffset, 0) # seek to entry from beginning of the file
+        fd.seek(0x8, 1) # seek to file data length
+        dataLength = read_int_little(fd)
+        if dataLength != 0 or dataLength != -1: # is it possible to have a length of 0xFFFFFFFF?
+            fd.seek(entryOffset, 0)
+            fd.seek(0xC, 1) # seek to data offset value
+            dataOffset = read_int_little(fd)
+            if dataOffset != -1:
+                print(dataOffset, dataLength)
+                fd.seek(dataOffset, 0) # seek to beginning of data
+                filedata = fd.read(dataLength)
+                calculatedChecksum = zlib.crc32(filedata)
+                fd.seek(entryOffset, 0) # seek to beginning of entry
+                fd.seek(0x10, 1) # seek to crc value of file
+                if read_uint_little(fd) != calculatedChecksum:
+                    print("Bad Dump!\nCRC does not match!")
+                outFile = open(file_name, "w+b")
+                outFile.write(filedata)
+                outFile.close() # close file
+            else:
+                print("Bad File Offset for %s" % file_name)
+        else:
+            print("Bad File Length for %s" % file_name)
+    else:
+        print("%s not found" % filename)
+
+#end of ExtractFile_RKV2
+
 def main():
     args = sys.argv[1:] # remove first argument which is always the path to this python file
     
@@ -248,6 +313,9 @@ def main():
             print("RKV2!")
             dump_filenames_RKV2(rkvFd, listFd)
             listFd.close() # close list file
+            
+        if len(args) > 2 and args[1] == "-extract":
+            ExtractFile_RKV2(rkvFd, args[2])
     else:
         if len(args) > 1 and args[1] == "-dumpNames":
             # extension should be the last data within path
