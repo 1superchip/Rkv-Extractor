@@ -1,6 +1,8 @@
 # Rkv-Extractor
  A python program to extract files from Merkury Archives (RKV)
  
+ This supports extracting RKV1 and RKV2 archives
+ 
  This does not support writing files or building RKVs yet, just extracting files from them
  
  Extracted files are currently placed in the folder of the program
