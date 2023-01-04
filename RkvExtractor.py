@@ -3,6 +3,7 @@ import zlib # for crc calculation
 
 # Written by Chippy
 
+# RKV1
 # file entries come before directory entries
 # go to directory entries by adding file entry array size to file entry offset
 
@@ -76,6 +77,32 @@ def dump_filenames(fd, outFd):
     
 #end of dump_filenames
 
+def dump_filenames_RKV2(fd, outFd):
+    #RKV2 file entry size is 0x14
+    fd.seek(4, 0) # seek to file entry count
+    nmbrOfEntries = read_int_little(fd) # read entry count
+    print(nmbrOfEntries)
+    entryNameLength = read_int_little(fd) # read name length
+    unused = read_int_little(fd)
+    unused = read_int_little(fd)
+    entryOffset = read_int_little(fd)
+    stringTableOffset = entryOffset + (nmbrOfEntries * 0x14)
+    
+    currEntryOffset = entryOffset
+    fd.seek(entryOffset, 0) # seek to first entry
+    print(entryOffset)
+    i = 0
+    for i in range(nmbrOfEntries):
+        fileNameAddr = read_int_little(fd) # read string offset
+        #print(fileNameAddr)
+        fd.seek(stringTableOffset + fileNameAddr, 0)
+        fileName = read_string(fd)
+        outFd.write(fileName + '\n')
+        currEntryOffset += 0x14
+        fd.seek(currEntryOffset, 0)
+    
+#end of dump_filenames_RKV2
+
 # this function prints the directory of the file after the file in filelist.txt
 def dump_filenames_directories(fd, outFd):
     fd.seek(0, 2) # go to end of the file
@@ -138,6 +165,7 @@ def find_FileEntry(fd, filename):
     fd.seek(0, 2) # go to end of the file
     fileSize = fd.tell()
     #print(fileSize)
+    #print(fd, fileSize)
     fd.seek(-0x20, 2) # go header from end of the file
     fd.seek(0x18, 1) # go to entry count address
     nmbrOfEntries = read_int_little(fd) # read entry count
@@ -207,26 +235,39 @@ def main():
     rkvPath = args[0] # get RKV path
     print(rkvPath)
     
-    if len(args) > 1 and args[1] == "-dumpNames":
-        rkvFd = open(rkvPath, "rb") # open rkv
-        fileList = os.path.dirname(sys.argv[0]) + "\\fileList.txt"
-        listFd = open(fileList, "w")
-        dump_filenames(rkvFd, listFd)
-        listFd.close() # close list file
-        rkvFd.close() # close rkv file!
-        
-    if len(args) > 1 and args[1] == "-dumpDirectories":
-        rkvFd = open(rkvPath, "rb") # open rkv
-        directoryList = os.path.dirname(sys.argv[0]) + "\\directoryList.txt"
-        listFd = open(directoryList, "w")
-        dump_directories(rkvFd, listFd)
-        listFd.close() # close list file
-        rkvFd.close() # close rkv file!
+    rkvFd = open(rkvPath, "rb") # open RKV
     
-    if len(args) > 2 and args[1] == "-extract":
-        rkvFd = open(rkvPath, "rb") # open rkv
-        ExtractFile(rkvFd, args[2])
-        rkvFd.close() # close rkv file!
+    if read_int_big(rkvFd) == 0x524B5632: # "RKV2"
+        # if the RKV is an RKV2
+        # only allow for file name dumping currently
+        if len(args) > 1 and args[1] == "-dumpNames":
+            # extension should be the last data within path
+            splitPath = rkvPath.split("\\")[-1].split(".")[0] # include archive's name in fileList file name
+            fileList = os.path.dirname(sys.argv[0]) + "\\" + splitPath + "_fileList.txt"
+            listFd = open(fileList, "w")
+            print("RKV2!")
+            dump_filenames_RKV2(rkvFd, listFd)
+            listFd.close() # close list file
+    else:
+        if len(args) > 1 and args[1] == "-dumpNames":
+            # extension should be the last data within path
+            splitPath = rkvPath.split("\\")[-1].split(".")[0] # include archive's name in fileList file name
+            fileList = os.path.dirname(sys.argv[0]) + "\\" + splitPath + "_fileList.txt"
+            listFd = open(fileList, "w")
+            rkvFd.seek(0, 0)
+            dump_filenames(rkvFd, listFd)
+            listFd.close() # close list file
+        
+        if len(args) > 1 and args[1] == "-dumpDirectories":
+            directoryList = os.path.dirname(sys.argv[0]) + "\\directoryList.txt"
+            listFd = open(directoryList, "w")
+            dump_directories(rkvFd, listFd)
+            listFd.close() # close list file
+    
+        if len(args) > 2 and args[1] == "-extract":
+            ExtractFile(rkvFd, args[2])
+    
+    rkvFd.close() # close RKV
     
 #end of main
 
